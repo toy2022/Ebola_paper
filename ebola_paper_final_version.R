@@ -9,18 +9,29 @@
 # load packages -------------------------------------------------------------------------------
 
 if(!require(pacman)) install.packages("pacman")
-pacman::p_load(rio, 
-               here, 
-               tidyverse, 
-               janitor, 
-               readxl, 
-               gtsummary, 
-               epikit, 
-               table1)
+pacman::p_load(rio, here, tidyverse, janitor, readxl, gtsummary, epikit, table1)
 
 # import data ---------------------------------------------------------------------------------
 
-# data requests can be made to IDDO by emailing: info@iddo.org
+dd_raw <- import(here("data", "raw","DD.csv")) # Death Details (DD) domain
+dm_raw <- import(here("data", "raw","DM.csv")) # Demographics (DM) domain
+ds_raw <- import(here("data", "raw","DS.csv")) # Disposition (DS) domain
+in_raw <- import(here("data", "raw","IN.csv")) # Treatments and Interventions (IN) domain
+lb_raw <- import(here("data", "raw","LB.csv")) # Laboratory Test Results (LB) domain
+mb_raw <- import(here("data", "raw","MB.csv")) # Microbiology Specimen Test Results (MB) domain
+sa_raw <- import(here("data", "raw","SA.csv")) # Symptoms and Adverse Events (SA) domain
+sc_raw <- import(here("data", "raw","SC.csv")) # Subject Characteristics (SC) domain
+ti_raw <- import(here("data", "raw","TI.csv")) # Trial Inclusion/Exclusion Criteria (TI) domain
+ts_raw <- import(here("data", "raw","TS.csv")) # Trial Summary (TS) domain
+tv_raw <- import(here("data", "raw","TV.csv")) # Trial Visits (TV) domain
+vs_raw <- import(here("data", "raw","VS.csv")) # Vital Signs (VS) domain
+er_raw <- import(here("data", "raw","ER.csv")) # Environmental Risk Factors (ER) domain
+ho_raw <- import(here("data", "raw","HO.csv")) # Healthcare Encounters (HO) domain
+rp_raw <- import(here("data", "raw","RP.csv")) # Reproductive System Findings (RP) domain
+rs_raw <- import(here("data", "raw","RS.csv")) # Disease Response and Clinical Classification (RS) domain
+po_raw <- import(here("data", "raw","PO.csv")) # Pregnancy Outcomes (PO) domain
+sv_raw <- import(here("data", "raw","SV.csv")) # Subject Visits (SV) domain
+relrec_raw <- import(here("data", "raw","RELREC.csv")) # Related Records (RELREC)
 
 
 # initial standardization ---------------------------------------------------------------------
@@ -59,49 +70,50 @@ dm_clean <- dm_raw %>%
   )) %>% 
   mutate(siteid = na_if(siteid, ""),
          siteid = replace_na(siteid, "UNKNOWN"),
-    site = recode(
-    siteid,
-    "COYAH"         = "Coyah ETC",
-    "CTE-NZEREKORE" = "ALIMA Nzérékoré ETC",
-    "Macenta"       = "MSF Macenta ETC",
-    "Gueckedou"     = "MSF Guéckédou ETC",
-    "DONKA"         = "Donka Hospital ETC",
-    "ELWA3"         = "ELWA3 ETC",
-    "1-Bong"        = "IMC Bong ETC",
-    "3-Margibi"     = "IMC Margibi ETC",
-    "MSF-Foya"      = "MSF Foya ETC",
-    "NIGERIA"       = "Nigeria CDC",
-    "GOAL-Port Loko"= "GOAL Port Loko ETC",
-    "Goderich"      = "Goderich ETC",
-    "Lakka"         = "Lakka Hospital ETC",
-    "MSF-Kissy"     = "MSF Methodist Boys High School ETC",
-    "MSF-Mag"       = "MSF Magburaka ETC",
-    "POW"           = "MSF Prince of Wales ETC",
-    "4-Kambia"      = "IMC Kambia ETC",
-    "MSF-PTS3"      = "MSF Police Training School ETC",
-    "KERRY TOWN"    = "SCI Kerry Town ETC",
-    "MSF-Bo"        = "MSF Bo Town ETC",
-    "2-Lunsar"      = "IMC Lunsar ETC",
-    "5-Makeni"      = "IMC Makeni ETC",
-    "MSF-Kail"      = "MSF Kailahun ETC"
-  )) %>% 
+         site = recode(
+           siteid,
+           "COYAH"         = "Coyah ETC",
+           "CTE-NZEREKORE" = "ALIMA Nzérékoré ETC",
+           "MSF Macenta"       = "MSF Macenta ETC",
+           "MSF Gueckedou"     = "MSF Guéckédou ETC",
+           "DONKA"         = "Donka Hospital ETC",
+           "ELWA3"         = "ELWA3 ETC",
+           "1-Bong"        = "IMC Bong ETC",
+           "3-Margibi"     = "IMC Margibi ETC",
+           "MSF-Foya"      = "MSF Foya ETC",
+           "NIGERIA"       = "Nigeria CDC",
+           "GOAL-Port Loko"= "GOAL Port Loko ETC",
+           "Goderich"      = "Goderich ETC",
+           "Lakka"         = "Lakka Hospital ETC",
+           "MSF Methodist Boys"     = "MSF Methodist Boys High School ETC",
+           "MSF Magburaka"       = "MSF Magburaka ETC",
+           "MSF Prince of Wales"           = "MSF Prince of Wales ETC",
+           "4-Kambia"      = "IMC Kambia ETC",
+           "MSF PTS Hastings"      = "MSF Police Training School ETC",
+           "KERRY TOWN"    = "SCI Kerry Town ETC",
+           "MSF Bo Town"        = "MSF Bo Town ETC",
+           "2-Lunsar"      = "IMC Lunsar ETC",
+           "5-Makeni"      = "IMC Makeni ETC",
+           "MSF Kailahun"      = "MSF Kailahun ETC",
+           ""  = "Unknown"
+         )) %>% 
   select(studyid, usubjid, siteid, site, sex, country, age,    # select interested variables for the analysis
          age_group)
 
 ds_clean <- ds_raw %>% 
   clean_names() %>%                                       # transform the variable names to lower characters 
   mutate(dsdecod = na_if(dsdecod, ""),                    # change blank cells to NA 
-    outcome = case_when(                                  # re-determine the data elements in DSDECOD
-    dsdecod == "DEATH"                   ~ "Dead",
-    dsdecod == "DISCHARGED"              ~ "Recovered",
-    dsdecod == "COMPLETED"             | 
-    dsdecod == "UNKNOWN"               |
-    dsdecod == "STILL IN HOSPITAL"     | 
-    dsdecod == "WITHDRAWAL BY SUBJECT" |
-    dsdecod == "LOST TO FOLLOW-UP"     | 
-    dsdecod == "TRANSFERRED"           |
-    is.na(dsdecod)                       ~ "Unknown"
-  )) %>% 
+         outcome = case_when(                                  # re-determine the data elements in DSDECOD
+           dsdecod == "DEATH"                   ~ "Dead",
+           dsdecod == "DISCHARGED"              ~ "Recovered",
+           dsdecod == "COMPLETED"             | 
+             dsdecod == "UNKNOWN"               |
+             dsdecod == "STILL IN HOSPITAL"     | 
+             dsdecod == "WITHDRAWAL BY SUBJECT" |
+             dsdecod == "LOST TO FOLLOW-UP"     | 
+             dsdecod == "TRANSFERRED"           |
+             is.na(dsdecod)                       ~ "Unknown"
+         )) %>% 
   select(studyid, usubjid, epoch, outcome)                # select interested variables for the analysis
 
 mb_clean <- mb_raw %>% 
@@ -109,22 +121,22 @@ mb_clean <- mb_raw %>%
   mutate(
     mbstresc = na_if(mbstresc, ""),                       # change blank cells to NA
     mbstresc2 = case_when(                                # re-determine the data elements in MBSTRESC & MBTEST
-    mbstresc == "POSITIVE" | 
-    mbstresc < 40                     ~ "Positive",
-    mbstresc == "NEGATIVE" | 
-    mbstresc >= 40         | 
-    mbstresc == ">40"      | 
-    mbstresc == ">45"                 ~ "Negative",
-    TRUE                              ~ "Unknown"),
+      mbstresc == "POSITIVE" | 
+        mbstresc < 40                     ~ "Positive",
+      mbstresc == "NEGATIVE" | 
+        mbstresc >= 40         | 
+        mbstresc == ">40"      | 
+        mbstresc == ">45"                 ~ "Negative",
+      TRUE                              ~ "Unknown"),
     mbtest2 = case_when(
-    mbtest == "Dengue Flavivirus"     ~ "Dengue",
-    mbtest == "Lassa Mammarenavirus"  ~ "Lassa fever",
-    mbtest == "Measles Morbillivirus" ~ "Measles",
-    mbtest == "Plasmodium" | 
-    mbtest == "Plasmodium falciparum" ~ "Malaria", 
-    mbtest == "Zaire Ebolavirus"      ~ "Ebola Virus Disease",
-    TRUE                              ~ mbtest
-  )) %>% 
+      mbtest == "Dengue Flavivirus"     ~ "Dengue",
+      mbtest == "Lassa Mammarenavirus"  ~ "Lassa fever",
+      mbtest == "Measles Morbillivirus" ~ "Measles",
+      mbtest == "Plasmodium" | 
+        mbtest == "Plasmodium falciparum" ~ "Malaria", 
+      mbtest == "Zaire Ebolavirus"      ~ "Ebola Virus Disease",
+      TRUE                              ~ mbtest
+    )) %>% 
   select(studyid, usubjid, mbtest2, mbstresc2)            # select interested variables for the analysis
 
 sa_clean <- sa_raw %>% 
@@ -133,184 +145,97 @@ sa_clean <- sa_raw %>%
     samodify = na_if(samodify, "")) %>% 
   mutate(
     samodify2 = case_when(
-      samodify == "FEVER" |
-       samodify_lm == "FEVER"                                           ~ "Fever",
-      samodify == "HEADACHE" |
-       samodify_lm == "HEADACHE"                                        ~ "Headache",
+      samodify == "FEVER"                                            ~ "Fever",
+      samodify == "HEADACHE"                                        ~ "Headache",
       samodify == "ANOREXIA" | 
-      samodify == "LOSS OF APPETITE/ANOREXIA" |
-       samodify_lm == "ANOREXIA" | 
-       samodify_lm == "LOSS OF APPETITE/ANOREXIA"                       ~ "Anorexia",
+        samodify == "LOSS OF APPETITE/ANOREXIA"                       ~ "Anorexia",
       samodify == "STOMACH PAIN" |
-      samodify == "ABDOMINAL BLOATING (HEPATO/GASTRO/ENTEROLOGY)"|
-      samodify == "ABDOMINAL PAIN" |
-      samodify == "SENSITIVE ABDOMEN" |
-      samodify == "UMBILICAL PAIN" |
-      samodify == "UPPER QUADRANT PAIN" |
-      samodify == "ABDOMINAL PAIN (HEPATO/GASTRO/ENTEROLOGY)" |
-      samodify == "EPIGASTRIC PAIN" |
-      samodify == "ABDOMINAL BLOATING" | 
-        samodify_lm == "STOMACH PAIN" |
-        samodify_lm == "ABDOMINAL BLOATING (HEPATO/GASTRO/ENTEROLOGY)"|
-        samodify_lm == "ABDOMINAL PAIN" |
-        samodify_lm == "SENSITIVE ABDOMEN" |
-        samodify_lm == "UMBILICAL PAIN" |
-        samodify_lm == "UPPER QUADRANT PAIN" |
-        samodify_lm == "ABDOMINAL PAIN (HEPATO/GASTRO/ENTEROLOGY)" |
-        samodify_lm == "EPIGASTRIC PAIN" |
-        samodify_lm == "ABDOMINAL BLOATING"                             ~ "Stomach pain",
+        samodify == "ABDOMINAL BLOATING (HEPATO/GASTRO/ENTEROLOGY)"|
+        samodify == "ABDOMINAL PAIN" |
+        samodify == "SENSITIVE ABDOMEN" |
+        samodify == "UMBILICAL PAIN" |
+        samodify == "UPPER QUADRANT PAIN" |
+        samodify == "ABDOMINAL PAIN (HEPATO/GASTRO/ENTEROLOGY)" |
+        samodify == "EPIGASTRIC PAIN" |
+        samodify == "ABDOMINAL BLOATING"                              ~ "Stomach pain",
       samodify == "VOMITING" |
-      samodify == "VOMITING/NAUSEA" |
-      samodify == "NAUSEA"  | 
-        samodify_lm == "VOMITING" |
-        samodify_lm == "VOMITING/NAUSEA" |
-        samodify_lm == "NAUSEA"                                         ~ "Vomiting",
+        samodify == "VOMITING/NAUSEA" |
+        samodify == "NAUSEA"                                         ~ "Vomiting",
       samodify == "DIARRHOEA"  |
-      samodify == "DIGESTIVE LOSS" | 
-        samodify_lm == "DIARRHOEA"  |
-        samodify_lm == "DIGESTIVE LOSS"                                 ~ "Diarrhoea",
+        samodify == "DIGESTIVE LOSS"                                 ~ "Diarrhoea",
       samodify == "MUSCLE PAIN"| 
-      samodify == "ARTHRALGIA" |
-      samodify == "JOINT PAIN" |
-      samodify == "MYALGIA"    |
-      samodify == "PAIN"       |
-      samodify == "RHEUMATISM" | 
-      samodify == "BACK PAIN (RHEUMATOLOGY)" | 
-      samodify == "JOINT PAIN (RHEUMATOLOGY)"| 
-      samodify == "LOWER BACK PAIN" |
-      samodify == "LOWER BACK PAIN (RHEUMATOLOGY)"|
-      samodify == "NECK PAIN" |
-      samodify == "NECK PAIN (RHEUMATOLOGY)"|
-      samodify == "STIFFNESS" |
-      samodify == "BACK PAIN" | 
-        samodify_lm == "MUSCLE PAIN"| 
-        samodify_lm == "ARTHRALGIA" |
-        samodify_lm == "JOINT PAIN" |
-        samodify_lm == "MYALGIA"    |
-        samodify_lm == "PAIN"       |
-        samodify_lm == "RHEUMATISM" | 
-        samodify_lm == "BACK PAIN (RHEUMATOLOGY)" | 
-        samodify_lm == "JOINT PAIN (RHEUMATOLOGY)"| 
-        samodify_lm == "LOWER BACK PAIN" |
-        samodify_lm == "LOWER BACK PAIN (RHEUMATOLOGY)"|
-        samodify_lm == "NECK PAIN" |
-        samodify_lm == "NECK PAIN (RHEUMATOLOGY)"|
-        samodify_lm == "STIFFNESS" |
-        samodify_lm == "BACK PAIN"                                     ~ "aching muscles or joints",
+        samodify == "ARTHRALGIA" |
+        samodify == "JOINT PAIN" |
+        samodify == "MYALGIA"    |
+        samodify == "PAIN"       |
+        samodify == "RHEUMATISM" | 
+        samodify == "BACK PAIN (RHEUMATOLOGY)" | 
+        samodify == "JOINT PAIN (RHEUMATOLOGY)"| 
+        samodify == "LOWER BACK PAIN" |
+        samodify == "LOWER BACK PAIN (RHEUMATOLOGY)"|
+        samodify == "NECK PAIN" |
+        samodify == "NECK PAIN (RHEUMATOLOGY)"|
+        samodify == "STIFFNESS" |
+        samodify == "BACK PAIN"                                      ~ "aching muscles or joints",
       samodify == "DIFFICULTY SWALLOWING"|
-      samodify == "SORE THROAT" |
-      samodify == "DYSPHAGIA"|
-      samodify == "DYSPHAGIA (HEPATO/GASTRO/ENTEROLOGY)" |
-        samodify_lm == "DIFFICULTY SWALLOWING"|
-        samodify_lm == "SORE THROAT" |
-        samodify_lm == "DYSPHAGIA"|
-        samodify_lm == "DYSPHAGIA (HEPATO/GASTRO/ENTEROLOGY)"          ~ "Difficulty swallowing/Sore throat",
+        samodify == "SORE THROAT" |
+        samodify == "DYSPHAGIA"|
+        samodify == "DYSPHAGIA (HEPATO/GASTRO/ENTEROLOGY)"          ~ "Difficulty swallowing/Sore throat",
       samodify == "DIFFICULTY BREATHING"|
-      samodify == "SHORTNESS OF BREATH" |
-      samodify == "RAPID BREATHING"     |
-      samodify == "DYSPNEA" |
-      samodify == "DYSPNEA (CARDIOLOGY)"|   
-      samodify == "DYSPNEA (PNEUMOLOGY)"|
-        samodify_lm == "DIFFICULTY BREATHING"|
-        samodify_lm == "SHORTNESS OF BREATH" |
-        samodify_lm == "RAPID BREATHING"     |
-        samodify_lm == "DYSPNEA" |
-        samodify_lm == "DYSPNEA (CARDIOLOGY)" |   
-        samodify_lm == "DYSPNEA (PNEUMOLOGY)"                            ~ "Difficulty breathing",
-      samodify == "HICCOUGHS" |
-        samodify_lm == "HICCOUGHS"                                         ~ "Hiccups",
+        samodify == "SHORTNESS OF BREATH" |
+        samodify == "RAPID BREATHING"     |
+        samodify == "DYSPNEA" |
+        samodify == "DYSPNEA (CARDIOLOGY)"|   
+        samodify == "DYSPNEA (PNEUMOLOGY)"                            ~ "Difficulty breathing",
+      samodify == "HICCOUGHS"                                          ~ "Hiccups",
       samodify == "RASH" | 
-      samodify == "SKIN RASH" |
-      samodify == "RASH/REDNESS" |
-        samodify_lm == "RASH" | 
-        samodify_lm == "SKIN RASH" |
-        samodify_lm == "RASH/REDNESS"                                    ~ "Rash",
+        samodify == "SKIN RASH" |
+        samodify == "RASH/REDNESS"                                     ~ "Rash",
       samodify == "ANURIA"   |
-      samodify == "ANURIA (UROLOGY/NEPHROLOGY)" |
-      samodify == "DIURESIS" |
-      samodify == "HEPATOMEGALY" |
-      samodify == "JANUDICE" |
-      samodify == "JAUNDICE" |
-      samodify == "JAUNDICE (YELLOW EYES)"|
-      samodify == "PAINFUL URINATION"|
-      samodify == "PAINFUL URINATION AND ODOUR"|
-      samodify == "POLYDIPSIA (UROLOGY/NEPHROLOGY)"|
-      samodify == "POLYURIA (UROLOGY/NEPHROLOGY)"  |
-      samodify == "ACUTE KIDNEY INJURY" |
-        samodify_lm == "ANURIA"   |
-        samodify_lm == "ANURIA (UROLOGY/NEPHROLOGY)" |
-        samodify_lm == "DIURESIS" |
-        samodify_lm == "HEPATOMEGALY" |
-        samodify_lm == "JANUDICE" |
-        samodify_lm == "JAUNDICE" |
-        samodify_lm == "JAUNDICE (YELLOW EYES)"|
-        samodify_lm == "PAINFUL URINATION"|
-        samodify_lm == "PAINFUL URINATION AND ODOUR"|
-        samodify_lm == "POLYDIPSIA (UROLOGY/NEPHROLOGY)"|
-        samodify_lm == "POLYURIA (UROLOGY/NEPHROLOGY)"  |
-        samodify_lm == "ACUTE KIDNEY INJURY"                          ~ "Impaired kidney and liver function", 
+        samodify == "ANURIA (UROLOGY/NEPHROLOGY)" |
+        samodify == "DIURESIS" |
+        samodify == "HEPATOMEGALY" |
+        samodify == "JANUDICE" |
+        samodify == "JAUNDICE" |
+        samodify == "JAUNDICE (YELLOW EYES)"|
+        samodify == "PAINFUL URINATION"|
+        samodify == "PAINFUL URINATION AND ODOUR"|
+        samodify == "POLYDIPSIA (UROLOGY/NEPHROLOGY)"|
+        samodify == "POLYURIA (UROLOGY/NEPHROLOGY)"  |
+        samodify == "ACUTE KIDNEY INJURY"                          ~ "Impaired kidney and liver function", 
       samodify == "EPISTAXIS"|
-      samodify == "UNEXPLAINED BLEEDING"|
-      samodify == "VAGINAL BLEEDING" |
-      samodify == "BLACK STOOLS OR MELENA"|
-      samodify == "BLACK STOOLS/MELENA"|
-      samodify == "BLACK STOOL/MELENA"|
-      samodify == "BLEEDING AT INJECTION"|
-      samodify == "BLEEDING GUMS"|
-      samodify == "BLEEDING"|
-      samodify == "BLEEDING VAGINA"|
-      samodify == "BLOODY DIARRHOEA"|
-      samodify == "BLOOD IN VOMIT"|
-      samodify == "BRUISING"|
-      samodify == "COUGHING UP BLOOD"|
-      samodify == "EYE HEMORRHAGE"|
-      samodify == "HEMATEMESIS"|
-      samodify == "HEMATEMESIS (HEPATO/GASTRO/ENTEROLOGY)"|
-      samodify == "HEMATURIA"|
-      samodify == "HEMATURIA (UROLOGY/NEPHROLOGY)"|
-      samodify == "HEMOPTYSIS"|
-      samodify == "INJECTION SITE BLEEDING"|
-      samodify == "MELENA"|
-      samodify == "NOSE BLEED/EPISTAXIS"|
-      samodify == "OTHER HEMORRHAGE"|
-      samodify == "PETECHIAE"|
-      samodify == "SPITTING UP BLOOD"|
-      samodify == "VOMITING BLOOD"|
-        samodify_lm == "EPISTAXIS"|
-        samodify_lm == "UNEXPLAINED BLEEDING"|
-        samodify_lm == "VAGINAL BLEEDING" |
-        samodify_lm == "BLACK STOOLS OR MELENA"|
-        samodify_lm == "BLACK STOOLS/MELENA"|
-        samodify_lm == "BLACK STOOL/MELENA"|
-        samodify_lm == "BLEEDING AT INJECTION"|
-        samodify_lm == "BLEEDING GUMS"|
-        samodify_lm == "BLEEDING"|
-        samodify_lm == "BLEEDING VAGINA"|
-        samodify_lm == "BLOODY DIARRHOEA"|
-        samodify_lm == "BLOOD IN VOMIT"|
-        samodify_lm == "BRUISING"|
-        samodify_lm == "COUGHING UP BLOOD"|
-        samodify_lm == "EYE HEMORRHAGE"|
-        samodify_lm == "HEMATEMESIS"|
-        samodify_lm == "HEMATEMESIS (HEPATO/GASTRO/ENTEROLOGY)"|
-        samodify_lm == "HEMATURIA"|
-        samodify_lm == "HEMATURIA (UROLOGY/NEPHROLOGY)"|
-        samodify_lm == "HEMOPTYSIS"|
-        samodify_lm == "INJECTION SITE BLEEDING"|
-        samodify_lm == "MELENA"|
-        samodify_lm == "NOSE BLEED/EPISTAXIS"|
-        samodify_lm == "OTHER HEMORRHAGE"|
-        samodify_lm == "PETECHIAE"|
-        samodify_lm == "SPITTING UP BLOOD"|
-        samodify_lm == "VOMITING BLOOD"                             ~ "Internal and external bleeding",
+        samodify == "UNEXPLAINED BLEEDING"|
+        samodify == "VAGINAL BLEEDING" |
+        samodify == "BLACK STOOLS OR MELENA"|
+        samodify == "BLACK STOOLS/MELENA"|
+        samodify == "BLACK STOOL/MELENA"|
+        samodify == "BLEEDING AT INJECTION"|
+        samodify == "BLEEDING GUMS"|
+        samodify == "BLEEDING"|
+        samodify == "BLEEDING VAGINA"|
+        samodify == "BLOODY DIARRHOEA"|
+        samodify == "BLOOD IN VOMIT"|
+        samodify == "BRUISING"|
+        samodify == "COUGHING UP BLOOD"|
+        samodify == "EYE HEMORRHAGE"|
+        samodify == "HEMATEMESIS"|
+        samodify == "HEMATEMESIS (HEPATO/GASTRO/ENTEROLOGY)"|
+        samodify == "HEMATURIA"|
+        samodify == "HEMATURIA (UROLOGY/NEPHROLOGY)"|
+        samodify == "HEMOPTYSIS"|
+        samodify == "INJECTION SITE BLEEDING"|
+        samodify == "MELENA"|
+        samodify == "NOSE BLEED/EPISTAXIS"|
+        samodify == "OTHER HEMORRHAGE"|
+        samodify == "PETECHIAE"|
+        samodify == "SPITTING UP BLOOD"|
+        samodify == "VOMITING BLOOD"               ~ "Internal and external bleeding",
       samodify == "ASTHENIA" |
-      samodify == "FATIGUE/MALAISE" |
-      samodify == "INTENSE GENERAL FATIGUE"|
-        samodify_lm == "ASTHENIA" |
-        samodify_lm == "FATIGUE/MALAISE" |
-        samodify_lm == "INTENSE GENERAL FATIGUE"                 ~ "Lethargy/Fatigue",
+        samodify == "FATIGUE/MALAISE" |
+        samodify == "INTENSE GENERAL FATIGUE"                 ~ "Lethargy/Fatigue",
       TRUE                                                          ~ "No symptoms"
     ))
+
 
 rp_clean <- rp_raw %>% 
   clean_names() %>% 
@@ -365,7 +290,7 @@ mal_ebol <- mb_ebola %>%
   select(studyid, usubjid, mbtest2.x, mbtest2.y) %>% 
   mutate(combine = case_when(
     mbtest2.x == "Ebola Virus Disease" &
-    mbtest2.y == "Malaria"               ~ "EVD and Malaria", 
+      mbtest2.y == "Malaria"               ~ "EVD and Malaria", 
     is.na(mbtest2.x)                     ~ "Malaria",
     is.na(mbtest2.y)                     ~ "Ebola Virus Disease"
   ))
@@ -439,7 +364,7 @@ ebola_signs_symptoms <- mb_ebola %>%
 lethargy_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Lethargy/Fatigue")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%  
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -464,7 +389,7 @@ table1(~ samodify2.y + samodify2.x, data = lethargy_join,
 fever_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Fever")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>% 
+                             saoccur == "N")) %>% 
   group_by(usubjid, samodify2) %>%  
   summarise(n_cases = n()) %>% 
   ungroup()
@@ -489,7 +414,7 @@ table1(~ samodify2.y + samodify2.x, data = fever_join,
 anorexia_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Anorexia")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%  
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -514,7 +439,7 @@ table1(~ samodify2.y + samodify2.x, data = anorexia_join,
 headache_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Headache")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>% 
   summarise(n_cases = n()) %>% 
   ungroup()
@@ -539,7 +464,7 @@ table1(~ samodify2.y + samodify2.x, data = headache_join,
 aching_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "aching muscles or joints")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>% 
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -564,7 +489,7 @@ table1(~ samodify2.y + samodify2.x, data = aching_join,
 vomiting_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Vomiting")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%  
   summarise(n_cases = n()) %>% 
   ungroup()
@@ -589,7 +514,7 @@ table1(~ samodify2.y + samodify2.x, data = vomiting_join,
 diarrhoea_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Diarrhoea")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%   
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -614,7 +539,7 @@ table1(~ samodify2.y + samodify2.x, data = diarrhoea_join,
 stomachpain_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Stomach pain")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>% 
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -639,7 +564,7 @@ table1(~ samodify2.y + samodify2.x, data = stomachpain_join,
 bleeding_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Internal and external bleeding")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%   
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -664,7 +589,7 @@ table1(~ samodify2.y + samodify2.x, data = bleeding_join,
 throat_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Difficulty swallowing/Sore throat")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%  
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -689,7 +614,7 @@ table1(~ samodify2.y + samodify2.x, data = throat_join,
 hiccups_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Hiccups")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%   
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -714,7 +639,7 @@ table1(~ samodify2.y + samodify2.x, data = hiccups_join,
 breathing_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Difficulty breathing")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>% 
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -739,7 +664,7 @@ table1(~ samodify2.y + samodify2.x, data = breathing_join,
 kidney_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Impaired kidney and liver function")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%  
   summarise(n_cases = n()) %>% 
   ungroup() 
@@ -764,7 +689,7 @@ table1(~ samodify2.y + samodify2.x, data = kidney_join,
 rash_denominator <- ebola_signs_symptoms %>% 
   filter(samodify2 == "Rash")%>%
   filter(sapresp == "Y" & (saoccur == "Y" | 
-                           saoccur == "N")) %>%
+                             saoccur == "N")) %>%
   group_by(usubjid, samodify2) %>%   
   summarise(n_cases = n()) %>% 
   ungroup() 
